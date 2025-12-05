@@ -8,8 +8,6 @@ import lombok.Data;
 
 @Data
 public class UserRequestDTO {
-    private Integer userId;
-
     @NotBlank(message = "El nombre es obligatorio")
     @Size(max = 50, message = "El nombre debe tener como máximo 50 caracteres")
     private String name;
