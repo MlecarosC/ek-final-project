@@ -11,7 +11,7 @@ import com.eureka.project.models.UserModel;
 public interface UserRepository extends JpaRepository<UserModel, Integer> {
     @Query("SELECT new com.eureka.project.dto.UsersByCategoriesDTO(" +
            "d.id, d.name, COUNT(u)) " +
-           "FROM User u " +
+           "FROM UserModel u " +
            "JOIN u.department d " +
            "GROUP BY d.id, d.name " +
            "ORDER BY d.id")
