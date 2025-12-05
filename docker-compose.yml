@@ -1,0 +1,56 @@
+services:
+  # Servicio de Base de Datos MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: eureka-final-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: eureka-project-db
+      MYSQL_USER: eureka_user
+      MYSQL_PASSWORD: eureka_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./src/main/resources/data.sql:/docker-entrypoint-initdb.d/2-data.sql
+    networks:
+      - eureka-network
+    healthcheck:
+      test: ["CMD", "mysql", "-u", "eureka_user", "-peureka_pass", "-e", "SELECT 1 FROM users LIMIT 1;", "eureka-project-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # Servicio de usuarios Spring Boot
+  api-users:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: eureka-final-api-users
+    restart: always
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/eureka-project-db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: eureka_user
+      SPRING_DATASOURCE_PASSWORD: eureka_pass
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
+      SPRING_SQL_INIT_MODE: never
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - eureka-network
+
+volumes:
+  mysql_data:
+
+networks:
+  eureka-network:
+    driver: bridge

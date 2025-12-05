@@ -1,0 +1,26 @@
+# Ignorar archivos innecesarios para la construcción de Docker
+
+# Directorios de build
+target/
+build/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentación
+README.md
+HELP.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
