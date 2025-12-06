@@ -55,4 +55,14 @@ public class GlobalExceptionHandler {
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
+
+    @ExceptionHandler(DepartmentNotFound.class)
+    public ResponseEntity<ErrorResponse> handleDepartmentNotFoundException(DepartmentNotFound exception, HttpServletRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(
+            LocalDate.now(),
+            HttpStatus.NOT_FOUND.value(),
+            exception.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
 }

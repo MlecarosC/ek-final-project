@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.eureka.project.dto.UserRequestDTO;
 import com.eureka.project.dto.UsersByCategoriesDTO;
 import com.eureka.project.exceptions.DataException;
+import com.eureka.project.exceptions.DepartmentNotFound;
 import com.eureka.project.exceptions.UniqueEmailException;
 import com.eureka.project.models.DepartmentModel;
 import com.eureka.project.models.UserModel;
@@ -60,7 +61,7 @@ public class UserServiceImpl implements UserService {
             logger.info("Guardando usuario: {}", user.getName());
 
             DepartmentModel department = departmentRepository.findById(user.getDepartmentId())
-                .orElseThrow(() -> new DataException("Departamento no encontrado con ID: " + user.getDepartmentId()));
+                .orElseThrow(() -> new DepartmentNotFound("Departamento no encontrado con ID: " + user.getDepartmentId()));
 
             UserModel userModel = new UserModel();
             userModel.setName(user.getName());
