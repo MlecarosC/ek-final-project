@@ -2,7 +2,6 @@ package com.eureka.project.services.impl;
 
 import java.util.List;
 
-import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,6 +16,10 @@ import com.eureka.project.repositories.DepartmentRepository;
 import com.eureka.project.repositories.UserRepository;
 import com.eureka.project.services.UserService;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
+
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -25,18 +28,20 @@ public class UserServiceImpl implements UserService {
     
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
-    private final ModelMapper modelMapper;
 
-    public UserServiceImpl(UserRepository userRepository, DepartmentRepository departmentRepository, ModelMapper modelMapper) {
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    public UserServiceImpl(UserRepository userRepository, DepartmentRepository departmentRepository) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
-        this.modelMapper = modelMapper;
     }
 
     @Override
     public List<UsersByCategoriesDTO> getUsersByCategories() {
         try {
             logger.info("Obteniendo usuarios por categorías");
+            entityManager.clear();
             return userRepository.getUsersByCategories();
         } catch (Exception e) {
             logger.error("Error al obtener usuarios por categorías: {}", e.getMessage(), e);
@@ -45,6 +50,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserRequestDTO save(UserRequestDTO user) {
         try {
             if (userRepository.existsByEmail(user.getEmail())) {
@@ -56,14 +62,20 @@ public class UserServiceImpl implements UserService {
             DepartmentModel department = departmentRepository.findById(user.getDepartmentId())
                 .orElseThrow(() -> new DataException("Departamento no encontrado con ID: " + user.getDepartmentId()));
 
-            UserModel userModel = modelMapper.map(user, UserModel.class);
+            UserModel userModel = new UserModel();
+            userModel.setName(user.getName());
+            userModel.setEmail(user.getEmail());
             userModel.setDepartment(department);
    
             UserModel savedUser = userRepository.save(userModel);
-            UserRequestDTO response = modelMapper.map(savedUser, UserRequestDTO.class);
+            userRepository.flush();
+            
+            UserRequestDTO response = new UserRequestDTO();
+            response.setName(savedUser.getName());
+            response.setEmail(savedUser.getEmail());
             response.setDepartmentId(savedUser.getDepartment().getId());
 
-            logger.info("Usuario guardado con éxito: {}", response.getName());
+            logger.info("Usuario guardado exitosamente con ID: {}", savedUser.getId());
             return response;
 
         } catch (Exception e) {
