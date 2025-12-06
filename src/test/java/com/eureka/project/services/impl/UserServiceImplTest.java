@@ -19,7 +19,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.eureka.project.dto.UserRequestDTO;
 import com.eureka.project.dto.UsersByCategoriesDTO;
 import com.eureka.project.exceptions.DataException;
-import com.eureka.project.exceptions.DepartmentNotFound;
 import com.eureka.project.exceptions.UniqueEmailException;
 import com.eureka.project.models.DepartmentModel;
 import com.eureka.project.models.UserModel;
@@ -87,6 +86,7 @@ class UserServiceImplTest {
 
         List<UsersByCategoriesDTO> expectedList = Arrays.asList(dto1, dto2);
 
+        doNothing().when(entityManager).clear();
         when(userRepository.getUsersByCategories()).thenReturn(expectedList);
 
         // Act
@@ -106,6 +106,7 @@ class UserServiceImplTest {
     @DisplayName("Debe lanzar DataException cuando falla la consulta")
     void getUsersByCategories_ThrowsDataException() {
         // Arrange
+        doNothing().when(entityManager).clear();
         when(userRepository.getUsersByCategories())
                 .thenThrow(new RuntimeException("Database error"));
 

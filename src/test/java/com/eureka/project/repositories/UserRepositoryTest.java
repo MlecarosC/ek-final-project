@@ -8,14 +8,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.test.context.TestPropertySource;
 
 import com.eureka.project.dto.UsersByCategoriesDTO;
 import com.eureka.project.models.DepartmentModel;
 import com.eureka.project.models.UserModel;
 
 @DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@TestPropertySource(properties = {
+    "spring.datasource.url=jdbc:h2:mem:testdb",
+    "spring.jpa.hibernate.ddl-auto=create-drop",
+    "spring.sql.init.mode=never"
+})
 @DisplayName("UserRepository Integration Tests")
 class UserRepositoryTest {
 
