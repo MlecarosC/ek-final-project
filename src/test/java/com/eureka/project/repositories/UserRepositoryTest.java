@@ -8,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.TestPropertySource;
@@ -18,12 +17,7 @@ import com.eureka.project.models.DepartmentModel;
 import com.eureka.project.models.UserModel;
 
 @DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:h2:mem:testdb",
-    "spring.jpa.hibernate.ddl-auto=create-drop",
-    "spring.sql.init.mode=never"
-})
+@TestPropertySource(locations = "classpath:application-test.properties")
 @DisplayName("UserRepository Integration Tests")
 class UserRepositoryTest {
 
@@ -38,17 +32,14 @@ class UserRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        // Limpiar base de datos
-        entityManager.clear();
-
         // Crear departamentos
         department1 = new DepartmentModel();
         department1.setName("Ventas");
-        entityManager.persist(department1);
+        department1 = entityManager.persistAndFlush(department1);
 
         department2 = new DepartmentModel();
         department2.setName("Recursos Humanos");
-        entityManager.persist(department2);
+        department2 = entityManager.persistAndFlush(department2);
 
         // Crear usuarios para department1
         for (int i = 1; i <= 3; i++) {
@@ -56,7 +47,7 @@ class UserRepositoryTest {
             user.setName("Usuario " + i);
             user.setEmail("user" + i + "@example.com");
             user.setDepartment(department1);
-            entityManager.persist(user);
+            entityManager.persistAndFlush(user);
         }
 
         // Crear usuarios para department2
@@ -65,28 +56,24 @@ class UserRepositoryTest {
             user.setName("Usuario " + i);
             user.setEmail("user" + i + "@example.com");
             user.setDepartment(department2);
-            entityManager.persist(user);
+            entityManager.persistAndFlush(user);
         }
 
-        entityManager.flush();
+        entityManager.clear();
     }
 
     @Test
     @DisplayName("Debe agrupar usuarios por departamento correctamente")
     void getUsersByCategories_GroupsCorrectly() {
-        // Act
         List<UsersByCategoriesDTO> result = userRepository.getUsersByCategories();
 
-        // Assert
         assertNotNull(result);
         assertEquals(2, result.size());
 
-        // Verificar primer departamento
         UsersByCategoriesDTO dept1 = result.get(0);
         assertEquals("Ventas", dept1.getDepartmentName());
         assertEquals(3L, dept1.getUserCount());
 
-        // Verificar segundo departamento
         UsersByCategoriesDTO dept2 = result.get(1);
         assertEquals("Recursos Humanos", dept2.getDepartmentName());
         assertEquals(3L, dept2.getUserCount());
@@ -95,64 +82,53 @@ class UserRepositoryTest {
     @Test
     @DisplayName("Debe ordenar resultados por departmentId")
     void getUsersByCategories_OrdersByDepartmentId() {
-        // Act
         List<UsersByCategoriesDTO> result = userRepository.getUsersByCategories();
 
-        // Assert
         assertNotNull(result);
+        assertEquals(2, result.size());
         assertTrue(result.get(0).getDepartmentId() < result.get(1).getDepartmentId());
     }
 
     @Test
     @DisplayName("Debe retornar true cuando el email existe")
     void existsByEmail_ReturnsTrue() {
-        // Act
         boolean exists = userRepository.existsByEmail("user1@example.com");
-
-        // Assert
         assertTrue(exists);
     }
 
     @Test
     @DisplayName("Debe retornar false cuando el email no existe")
     void existsByEmail_ReturnsFalse() {
-        // Act
         boolean exists = userRepository.existsByEmail("noexiste@example.com");
-
-        // Assert
         assertFalse(exists);
     }
 
     @Test
     @DisplayName("Debe guardar usuario correctamente")
     void save_PersistsUser() {
-        // Arrange
         UserModel newUser = new UserModel();
         newUser.setName("Nuevo Usuario");
         newUser.setEmail("nuevo@example.com");
         newUser.setDepartment(department1);
 
-        // Act
         UserModel saved = userRepository.save(newUser);
         entityManager.flush();
         entityManager.clear();
 
-        // Assert
         assertNotNull(saved.getId());
         UserModel found = entityManager.find(UserModel.class, saved.getId());
         assertNotNull(found);
         assertEquals("Nuevo Usuario", found.getName());
         assertEquals("nuevo@example.com", found.getEmail());
+        assertEquals(department1.getId(), found.getDepartment().getId());
     }
 
     @Test
     @DisplayName("Debe actualizar conteo cuando se agrega usuario")
     void getUsersByCategories_UpdatesCountWhenUserAdded() {
-        // Arrange - Estado inicial
         List<UsersByCategoriesDTO> before = userRepository.getUsersByCategories();
         long initialCount = before.get(0).getUserCount();
 
-        // Act - Agregar nuevo usuario
         UserModel newUser = new UserModel();
         newUser.setName("Test User");
         newUser.setEmail("test@example.com");
@@ -161,7 +137,6 @@ class UserRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        // Assert - Verificar incremento
         List<UsersByCategoriesDTO> after = userRepository.getUsersByCategories();
         assertEquals(initialCount + 1, after.get(0).getUserCount());
     }

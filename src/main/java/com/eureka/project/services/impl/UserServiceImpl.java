@@ -18,7 +18,6 @@ import com.eureka.project.repositories.UserRepository;
 import com.eureka.project.services.UserService;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 
 
@@ -29,13 +28,14 @@ public class UserServiceImpl implements UserService {
     
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final EntityManager entityManager;
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
-    public UserServiceImpl(UserRepository userRepository, DepartmentRepository departmentRepository) {
+    public UserServiceImpl(UserRepository userRepository, 
+                          DepartmentRepository departmentRepository,
+                          EntityManager entityManager) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -53,11 +53,11 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserRequestDTO save(UserRequestDTO user) {
-        try {
-            if (userRepository.existsByEmail(user.getEmail())) {
-                throw new UniqueEmailException("Email existente");
-            }
+        if (userRepository.existsByEmail(user.getEmail())) {
+            throw new UniqueEmailException("Email existente");
+        }
 
+        try {
             logger.info("Guardando usuario: {}", user.getName());
 
             DepartmentModel department = departmentRepository.findById(user.getDepartmentId())
@@ -79,6 +79,8 @@ public class UserServiceImpl implements UserService {
             logger.info("Usuario guardado exitosamente con ID: {}", savedUser.getId());
             return response;
 
+        } catch (DepartmentNotFound e) {
+            throw e;
         } catch (Exception e) {
             logger.error("Error al guardar usuario: {}", e.getMessage(), e);
             throw new DataException("Error al guardar usuario");

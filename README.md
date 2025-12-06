@@ -1,17 +1,28 @@
 # Final Project - Eureka
 
-API REST desarrollada con Spring Boot para la gestión de usuarios y departamentos. Este proyecto implementa operaciones, validaciones, manejo de excepciones y despliegue con Docker.
+API REST desarrollada con Spring Boot para la gestión de usuarios y departamentos. Este proyecto implementa operaciones CRUD, validaciones, manejo de excepciones y despliegue con Docker.
 
 ## 🚀 Tecnologías Utilizadas
 
+### Backend
 - **Java 21**
 - **Spring Boot 3.5.8**
 - **Spring Data JPA**
 - **MySQL 8.0**
-- **Docker & Docker Compose**
 - **Lombok**
 - **Bean Validation**
 - **Maven**
+
+### Testing
+- **JUnit 5**
+- **Mockito**
+- **Spring Boot Test**
+- **H2 Database** (in-memory para tests)
+- **MockMvc**
+
+### DevOps
+- **Docker & Docker Compose**
+- **Multi-stage builds**
 
 ## 📋 Requisitos Previos
 
@@ -202,19 +213,154 @@ curl -X POST http://localhost:8085/api/v1/users/create \
 }
 ```
 
-## 🔍 Características Técnicas Implementadas
+## 🧪 Tests
 
-### Validaciones
-- **Bean Validation** con anotaciones `@Valid`
-- Validación de email único a nivel de servicio
-- Validación de existencia de departamento
+El proyecto incluye una suite completa de tests unitarios y de integración con **JUnit 5** y **Mockito**.
 
-### Manejo de Excepciones
-- **Global Exception Handler** con `@RestControllerAdvice`
-- Excepciones personalizadas:
-  - `DataException`: Errores de base de datos
-  - `UniqueEmailException`: Email duplicado
-- Respuestas de error estandarizadas
+### Estructura de Tests
+
+```
+src/test/java/com/eureka/project/
+├── controllers/
+│   └── UserControllerTest.java          # Tests de endpoints REST (9 tests)
+├── services/impl/
+│   └── UserServiceImplTest.java         # Tests de lógica de negocio (8 tests)
+├── repositories/
+│   └── UserRepositoryTest.java          # Tests de queries JPQL (6 tests)
+└── exceptions/
+    └── GlobalExceptionHandlerTest.java  # Tests de manejo de errores (4 tests)
+```
+
+### Cobertura de Tests
+
+| Clase | Tests | Descripción |
+|-------|-------|-------------|
+| UserControllerTest | 9 | Endpoints REST, validaciones, códigos HTTP |
+| UserServiceImplTest | 8 | Lógica de negocio, excepciones, transacciones |
+| UserRepositoryTest | 6 | Queries JPQL, persistencia, integridad de datos |
+| GlobalExceptionHandlerTest | 4 | Manejo global de excepciones |
+| **TOTAL** | **27** | **Cobertura completa** |
+
+### Tecnologías de Testing
+
+- **JUnit 5**: Framework de testing
+- **Mockito**: Mocks y stubs
+- **Spring Boot Test**: Testing de integración
+- **H2 Database**: Base de datos en memoria para tests
+- **MockMvc**: Testing de controladores REST
+
+### Ejecutar Tests
+
+#### Opción 1: Ejecutar todos los tests
+
+```bash
+./mvnw test
+```
+
+**Resultado esperado:**
+```
+[INFO] Tests run: 27, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+#### Opción 2: Ejecutar tests específicos
+
+```bash
+# Tests de controladores
+./mvnw test -Dtest=UserControllerTest
+
+# Tests de servicios
+./mvnw test -Dtest=UserServiceImplTest
+
+# Tests de repositorios
+./mvnw test -Dtest=UserRepositoryTest
+
+# Tests de exception handler
+./mvnw test -Dtest=GlobalExceptionHandlerTest
+```
+
+#### Opción 3: Limpiar y ejecutar tests
+
+```bash
+./mvnw clean test
+```
+
+### Ejecutar Tests con Docker
+
+#### 1. Ejecutar tests dentro del contenedor
+
+```bash
+# Construir imagen con tests
+docker-compose build api-users
+
+# Ejecutar tests dentro del contenedor
+docker-compose run --rm api-users ./mvnw test
+```
+
+### Configuración de Tests
+
+Los tests usan una configuración separada con **H2 en memoria**:
+
+**src/test/resources/application-test.properties**
+```properties
+# Base de datos H2 en modo MySQL
+spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL
+spring.datasource.driver-class-name=org.h2.Driver
+
+# Hibernate para H2
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect
+
+# NO ejecutar scripts SQL de producción
+spring.sql.init.mode=never
+```
+
+### Ejemplos de Tests
+
+#### Test de Controlador (MockMvc)
+
+```java
+@Test
+void save_ReturnsCreated() throws Exception {
+    when(userService.save(any())).thenReturn(userRequestDTO);
+
+    mockMvc.perform(post("/api/v1/users/create")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(userRequestDTO)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Juan Pérez"));
+}
+```
+
+#### Test de Servicio (Mockito)
+
+```java
+@Test
+void save_ThrowsUniqueEmailException() {
+    when(userRepository.existsByEmail(anyString())).thenReturn(true);
+
+    UniqueEmailException exception = assertThrows(
+        UniqueEmailException.class,
+        () -> userService.save(userRequestDTO)
+    );
+
+    assertEquals("Email existente", exception.getMessage());
+}
+```
+
+#### Test de Repositorio (Integration Test)
+
+```java
+@Test
+void getUsersByCategories_GroupsCorrectly() {
+    List<UsersByCategoriesDTO> result = 
+        userRepository.getUsersByCategories();
+
+    assertEquals(2, result.size());
+    assertEquals("Ventas", result.get(0).getDepartmentName());
+    assertEquals(3L, result.get(0).getUserCount());
+}
+```
 
 ## 🐳 Configuración Docker
 
@@ -267,7 +413,51 @@ El proyecto incluye datos de prueba precargados:
   - 25 en Recursos Humanos
   - 20 en Contabilidad
 
-## 👨‍💻 Autor
-Martin Lecaros
+## 🧪 Pruebas con Postman/cURL
 
-Proyecto desarrollado para Eureka
+### Colección de Ejemplos
+
+#### 1. Listar usuarios por departamento
+```bash
+GET http://localhost:8085/api/v1/users/by-categories
+```
+
+#### 2. Crear usuario exitoso
+```bash
+POST http://localhost:8085/api/v1/users/create
+Content-Type: application/json
+
+{
+  "name": "Test Usuario",
+  "email": "test@example.com",
+  "departmentId": 1
+}
+```
+
+#### 3. Error: Email duplicado
+```bash
+POST http://localhost:8085/api/v1/users/create
+Content-Type: application/json
+
+{
+  "name": "Otro Usuario",
+  "email": "test@example.com",
+  "departmentId": 1
+}
+```
+
+#### 4. Error: Validación
+```bash
+POST http://localhost:8085/api/v1/users/create
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "email-invalido",
+  "departmentId": 1
+}
+```
+
+## 👨‍💻 Autor
+
+Martin Lecaros

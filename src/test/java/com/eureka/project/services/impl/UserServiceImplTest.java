@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.eureka.project.dto.UserRequestDTO;
 import com.eureka.project.dto.UsersByCategoriesDTO;
 import com.eureka.project.exceptions.DataException;
+import com.eureka.project.exceptions.DepartmentNotFound;
 import com.eureka.project.exceptions.UniqueEmailException;
 import com.eureka.project.models.DepartmentModel;
 import com.eureka.project.models.UserModel;
@@ -49,7 +50,6 @@ class UserServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Configurar datos de prueba
         departmentModel = new DepartmentModel();
         departmentModel.setId(1);
         departmentModel.setName("Ventas");
@@ -66,12 +66,9 @@ class UserServiceImplTest {
         userRequestDTO.setDepartmentId(1);
     }
 
-    // ==================== Tests para getUsersByCategories ====================
-
     @Test
     @DisplayName("Debe retornar lista de usuarios por categorías exitosamente")
     void getUsersByCategories_Success() {
-        // Arrange
         UsersByCategoriesDTO dto1 = UsersByCategoriesDTO.builder()
                 .departmentId(1)
                 .departmentName("Ventas")
@@ -89,50 +86,43 @@ class UserServiceImplTest {
         doNothing().when(entityManager).clear();
         when(userRepository.getUsersByCategories()).thenReturn(expectedList);
 
-        // Act
         List<UsersByCategoriesDTO> result = userService.getUsersByCategories();
 
-        // Assert
         assertNotNull(result);
         assertEquals(2, result.size());
         assertEquals("Ventas", result.get(0).getDepartmentName());
         assertEquals(17L, result.get(0).getUserCount());
         
-        verify(entityManager).clear();
-        verify(userRepository).getUsersByCategories();
+        verify(entityManager, times(1)).clear();
+        verify(userRepository, times(1)).getUsersByCategories();
     }
 
     @Test
     @DisplayName("Debe lanzar DataException cuando falla la consulta")
     void getUsersByCategories_ThrowsDataException() {
-        // Arrange
         doNothing().when(entityManager).clear();
         when(userRepository.getUsersByCategories())
                 .thenThrow(new RuntimeException("Database error"));
 
-        // Act & Assert
         DataException exception = assertThrows(DataException.class, () -> {
             userService.getUsersByCategories();
         });
 
         assertEquals("Error al obtener usuarios por categorias", exception.getMessage());
-        verify(entityManager).clear();
+        verify(entityManager, times(1)).clear();
+        verify(userRepository, times(1)).getUsersByCategories();
     }
-
-    // ==================== Tests para save ====================
 
     @Test
     @DisplayName("Debe guardar usuario exitosamente")
     void save_Success() {
-        // Arrange
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
         when(departmentRepository.findById(anyInt())).thenReturn(Optional.of(departmentModel));
         when(userRepository.save(any(UserModel.class))).thenReturn(userModel);
+        doNothing().when(userRepository).flush();
 
-        // Act
         UserRequestDTO result = userService.save(userRequestDTO);
 
-        // Assert
         assertNotNull(result);
         assertEquals("Juan Pérez", result.getName());
         assertEquals("juan.perez@example.com", result.getEmail());
@@ -147,10 +137,8 @@ class UserServiceImplTest {
     @Test
     @DisplayName("Debe lanzar UniqueEmailException cuando el email ya existe")
     void save_ThrowsUniqueEmailException() {
-        // Arrange
         when(userRepository.existsByEmail(anyString())).thenReturn(true);
 
-        // Act & Assert
         UniqueEmailException exception = assertThrows(UniqueEmailException.class, () -> {
             userService.save(userRequestDTO);
         });
@@ -164,15 +152,14 @@ class UserServiceImplTest {
     @Test
     @DisplayName("Debe lanzar DepartmentNotFound cuando el departamento no existe")
     void save_ThrowsDepartmentNotFound() {
-        // Arrange
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
         when(departmentRepository.findById(anyInt())).thenReturn(Optional.empty());
 
-        // Act & Assert
-        assertThrows(DataException.class, () -> {
+        DepartmentNotFound exception = assertThrows(DepartmentNotFound.class, () -> {
             userService.save(userRequestDTO);
         });
 
+        assertTrue(exception.getMessage().contains("Departamento no encontrado"));
         verify(userRepository).existsByEmail("juan.perez@example.com");
         verify(departmentRepository).findById(1);
         verify(userRepository, never()).save(any(UserModel.class));
@@ -181,13 +168,11 @@ class UserServiceImplTest {
     @Test
     @DisplayName("Debe manejar excepción al guardar usuario")
     void save_HandlesException() {
-        // Arrange
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
         when(departmentRepository.findById(anyInt())).thenReturn(Optional.of(departmentModel));
         when(userRepository.save(any(UserModel.class)))
                 .thenThrow(new RuntimeException("Database error"));
 
-        // Act & Assert
         DataException exception = assertThrows(DataException.class, () -> {
             userService.save(userRequestDTO);
         });
@@ -195,18 +180,13 @@ class UserServiceImplTest {
         assertEquals("Error al guardar usuario", exception.getMessage());
     }
 
-    // ==================== Tests para existsByEmail ====================
-
     @Test
     @DisplayName("Debe retornar true cuando el email existe")
     void existsByEmail_ReturnsTrue() {
-        // Arrange
         when(userRepository.existsByEmail(anyString())).thenReturn(true);
 
-        // Act
         boolean result = userService.existsByEmail("test@example.com");
 
-        // Assert
         assertTrue(result);
         verify(userRepository).existsByEmail("test@example.com");
     }
@@ -214,13 +194,10 @@ class UserServiceImplTest {
     @Test
     @DisplayName("Debe retornar false cuando el email no existe")
     void existsByEmail_ReturnsFalse() {
-        // Arrange
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
 
-        // Act
         boolean result = userService.existsByEmail("test@example.com");
 
-        // Assert
         assertFalse(result);
         verify(userRepository).existsByEmail("test@example.com");
     }
