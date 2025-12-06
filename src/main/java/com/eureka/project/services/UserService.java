@@ -8,4 +8,5 @@ import com.eureka.project.dto.UsersByCategoriesDTO;
 public interface UserService {
     List<UsersByCategoriesDTO> getUsersByCategories();
     UserRequestDTO save(UserRequestDTO user);
+    boolean existsByEmail(String email);
 }

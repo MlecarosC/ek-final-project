@@ -2,8 +2,6 @@ package com.eureka.project.controllers;
 
 import java.util.List;
 
-import org.apache.catalina.connector.Response;
-import org.springframework.boot.autoconfigure.security.SecurityProperties.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

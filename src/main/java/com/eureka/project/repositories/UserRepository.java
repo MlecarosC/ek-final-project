@@ -16,4 +16,6 @@ public interface UserRepository extends JpaRepository<UserModel, Integer> {
            "GROUP BY d.id, d.name " +
            "ORDER BY d.id")
     List<UsersByCategoriesDTO> getUsersByCategories();
+
+    boolean existsByEmail(String email);
 }
